@@ -8,13 +8,20 @@ let readingState = {
 
 function startReading() {
   if (readingState.currentPosition >= readingState.words.length) {
-    readingState.currentPosition = 0;
+    resetState();
+    return;
   }
 
   // Build natural phrases for human-like reading
   let phrase = '';
   let wordsRead = 0;
   let currentPhrase = [];
+  
+  // Notify popup about current position before starting
+  chrome.runtime.sendMessage({
+    action: 'wordProgress',
+    position: readingState.currentPosition
+  });
   
   while (readingState.currentPosition + wordsRead < readingState.words.length) {
     const word = readingState.words[readingState.currentPosition + wordsRead];
@@ -62,14 +69,15 @@ function startReading() {
     onEvent: (event) => {
       if (event.type === 'end' || event.type === 'error') {
         if (readingState.isPlaying) {
-          // Move position by the number of words we just read
-          const wordsRead = phrase.trim().split(/\s+/).length;
+          // Update position using the actual number of words processed
           readingState.currentPosition += wordsRead;
           
-          if (readingState.currentPosition < readingState.words.length) {
-            startReading();
-          } else {
+          // Ensure we don't exceed the array length
+          if (readingState.currentPosition >= readingState.words.length) {
             resetState();
+          } else {
+            // Immediate start of next phrase
+            startReading();
           }
         }
       }
