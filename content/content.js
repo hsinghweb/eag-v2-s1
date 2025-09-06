@@ -1,7 +1,12 @@
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'getPageContent') {
+    // Process text for natural phrase grouping
     const content = document.body.innerText
-      .replace(/\s+/g, ' ')
+      .replace(/([.!?])\s+/g, '$1 ') // Ensure single space after sentence endings
+      .replace(/([,;:])\s+/g, '$1 ') // Ensure single space after clause breaks
+      .replace(/\s+/g, ' ') // Normalize other spaces
+      .replace(/(["'])([^"']*?)\1/g, ' $2 ') // Handle quoted text as phrases
+      .replace(/\(([^)]+)\)/g, ' $1 ') // Handle parenthetical phrases
       .trim();
     sendResponse({ content });
   } else if (request.action === 'highlightWord') {
@@ -82,4 +87,4 @@ function highlightWord(index) {
     }
     wordCount += words.length;
   }
-} 
+}

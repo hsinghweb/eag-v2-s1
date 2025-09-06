@@ -11,19 +11,30 @@ function startReading() {
     readingState.currentPosition = 0;
   }
 
-  // Build a phrase of multiple words for smoother reading
+  // Build natural phrases for human-like reading
   let phrase = '';
-  let wordsToRead = 4; // Read more words at once for smoother flow
+  let wordsRead = 0;
+  let currentPhrase = [];
   
-  for (let i = 0; i < wordsToRead; i++) {
-    if (readingState.currentPosition + i < readingState.words.length) {
-      const word = readingState.words[readingState.currentPosition + i];
-      phrase += word + ' ';
+  while (readingState.currentPosition + wordsRead < readingState.words.length) {
+    const word = readingState.words[readingState.currentPosition + wordsRead];
+    currentPhrase.push(word);
+    wordsRead++;
+    
+    // Complete phrase on punctuation or reasonable length
+    if (/[.!?]$/.test(word) || // End of sentence
+        (/[,;:]$/.test(word) && currentPhrase.length >= 4) || // Natural break with minimum words
+        currentPhrase.length >= 8) { // Maximum phrase length
       
-      // Break if we hit end punctuation
+      phrase += currentPhrase.join(' ');
       if (/[.!?]$/.test(word)) {
-        break;
+        phrase += ' . '; // Add slight pause after sentences
+      } else if (/[,;:]$/.test(word)) {
+        phrase += ' , '; // Add minimal pause after clauses
+      } else {
+        phrase += ' ';
       }
+      break;
     }
   }
 
@@ -36,12 +47,18 @@ function startReading() {
   // Adjust speech rate for natural flow
   let speechRate = readingState.speed * 1.1; // Slightly increased base rate
   
-  // Speak with natural flow
-  chrome.tts.speak(phrase.trim(), {
-    rate: speechRate,
-    pitch: 1.0,
+  // Configure speech for natural pacing and intonation
+  const cleanPhrase = phrase.trim()
+    .replace(/\s+/g, ' ')
+    .replace(/\s*([.,;:!?])\s*/g, '$1 ');
+
+  chrome.tts.speak(cleanPhrase, {
+    rate: speechRate * 0.85, // Slower pace for clarity
+    pitch: 1.05, // Slightly higher pitch for better engagement
     volume: 1.0,
     enqueue: false,
+    voiceName: 'Google US English',
+    lang: 'en-US',
     onEvent: (event) => {
       if (event.type === 'end' || event.type === 'error') {
         if (readingState.isPlaying) {
@@ -90,4 +107,4 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendResponse({ success: true });
   }
   return true;
-}); 
+});
